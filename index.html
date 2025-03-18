@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Request Tool</title>
+    <script defer src="script.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Ferramenta de Requisições API</h1>
+    
+    <label for="config-name">Nome da Configuração:</label>
+    <input type="text" id="config-name" placeholder="Digite o nome da configuração">
+    
+    <label for="api-url">URL da API:</label>
+    <input type="text" id="api-url" placeholder="Digite a URL da API">
+    
+    <label for="headers">Headers (JSON):</label>
+    <textarea id="headers" placeholder='{"Authorization": "Bearer token"}'></textarea>
+    
+    <label for="body">Body (JSON):</label>
+    <textarea id="body" placeholder='{"email": "{{contact_email}}", "telefone": "{{contact_telefone}}"}'></textarea>
+    
+    <label for="csv-file">CSV (UTF-8):</label>
+    <input type="file" id="csv-file" accept=".csv">
+    
+    <label for="csv-separator">Separador CSV:</label>
+    <select id="csv-separator">
+        <option value=",">Vírgula (,)</option>
+        <option value=";">Ponto e vírgula (;)</option>
+        <option value="\t">Tabulação (Tab)</option>
+    </select>
+    
+    <label for="delay">Delay entre requisições (ms):</label>
+    <input type="number" id="delay" value="1000">
+    
+    <button id="start-request">Iniciar Requisições</button>
+    <button id="save-config">Salvar Configuração</button>
+
+    <!-- Botões para exportar e importar configurações -->
+    <button id="export-configs">Exportar Configurações</button>
+    <input type="file" id="import-configs" accept=".json" style="display: none;">
+    <button id="import-configs-btn">Importar Configurações</button>
+
+    <h2>Configurações Salvas:</h2>
+    <ul id="saved-configs"></ul>
+    
+    <h2>Resultados:</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Linha</th>
+                <th>Status</th>
+                <th>Resposta</th>
+            </tr>
+        </thead>
+        <tbody id="results"></tbody>
+    </table>
+
+    <script>
+        // Função para formatar os headers JSON
+        function formatHeaderJson(input) {
+            try {
+                let formatted = input.replace(/\s*\n\s*/g, "").replace(/:\s+/g, ":");
+                return JSON.parse(formatted);
+            } catch (error) {
+                alert("Erro no formato do header JSON. Verifique e tente novamente.");
+                return null;
+            }
+        }
+
+        // Função para substituir os placeholders no corpo da requisição
+        function replacePlaceholders(template, rowData, headersCSV) {
+            return template.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+                const fieldName = key.trim();
+                const fieldIndex = headersCSV.indexOf(fieldName);
+                if (fieldIndex !== -1) {
+                    return rowData[fieldIndex] || '';  // Substitui com o valor da linha, se encontrado
+                }
+                console.warn(`Campo {{${fieldName}}} não encontrado no cabeçalho do CSV.`);
+                console.log('Cabeçalho do CSV:', headersCSV);  // Exibe os cabeçalhos do CSV no console
+                return '';  // Retorna vazio se o campo não for encontrado no cabeçalho
+            });
+        }
+
+        // Função para carregar as configurações salvas no localStorage
+        function loadSavedConfigs() {
+        const savedConfigs = Object.keys(localStorage).filter(key => key.startsWith('config-'));
+        const savedConfigList = document.getElementById('saved-configs');
+        savedConfigList.innerHTML = '';
+
+        savedConfigs.forEach(configKey => {
+            const config = JSON.parse(localStorage.getItem(configKey));
+
+            // Criar o item da lista
+            const li = document.createElement('li');
+            li.textContent = config.name;
+            li.style.display = "flex";
+            li.style.justifyContent = "space-between";
+            li.style.alignItems = "center";
+            li.style.padding = "5px";
+            li.style.borderBottom = "1px solid #ccc";
+
+            // Criar botão de remoção (X)
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '✖';
+            removeBtn.style.marginLeft = "10px";
+            removeBtn.style.cursor = "pointer";
+            removeBtn.style.border = "none";
+            removeBtn.style.background = "transparent";
+            removeBtn.style.color = "red";
+            removeBtn.style.fontSize = "16px";
+
+            // Evento de clique para excluir a configuração
+            removeBtn.addEventListener('click', (event) => {
+                event.stopPropagation(); // Evita que o clique selecione a configuração
+                localStorage.removeItem(configKey);
+                loadSavedConfigs();
+            });
+
+            li.addEventListener('click', () => loadConfig(configKey));
+
+            // Adiciona o botão de remoção ao item da lista
+            li.appendChild(removeBtn);
+            savedConfigList.appendChild(li);
+        });
+    }
+
+        // Função para carregar uma configuração salva
+        function loadConfig(configKey) {
+            const config = JSON.parse(localStorage.getItem(configKey));
+            document.getElementById('config-name').value = config.name;
+            document.getElementById('api-url').value = config.apiUrl;
+            document.getElementById('headers').value = config.headers;
+            document.getElementById('body').value = config.body;
+            document.getElementById('csv-separator').value = config.separator;
+            document.getElementById('delay').value = config.delay;
+        }
+
+        // Função para salvar a configuração no localStorage
+        function saveConfig() {
+            const configName = document.getElementById('config-name').value;
+            if (!configName) {
+                alert("Por favor, digite um nome para a configuração.");
+                return;
+            }
+
+            const config = {
+                name: configName,
+                apiUrl: document.getElementById('api-url').value,
+                headers: document.getElementById('headers').value,
+                body: document.getElementById('body').value,
+                separator: document.getElementById('csv-separator').value,
+                delay: document.getElementById('delay').value
+            };
+
+            const configKey = `config-${configName}`;
+            localStorage.setItem(configKey, JSON.stringify(config));
+            loadSavedConfigs();
+        }
+
+        // Função para exportar as configurações salvas
+        document.getElementById('export-configs').addEventListener('click', () => {
+            const savedConfigs = Object.keys(localStorage)
+                .filter(key => key.startsWith('config-'))
+                .reduce((acc, key) => {
+                    acc[key] = JSON.parse(localStorage.getItem(key));
+                    return acc;
+                }, {});
+
+            const blob = new Blob([JSON.stringify(savedConfigs, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "configuracoes.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        // Função para importar configurações de um arquivo JSON
+        document.getElementById('import-configs-btn').addEventListener('click', () => {
+            document.getElementById('import-configs').click();
+        });
+
+        document.getElementById('import-configs').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedConfigs = JSON.parse(e.target.result);
+                    Object.keys(importedConfigs).forEach(key => {
+                        localStorage.setItem(key, JSON.stringify(importedConfigs[key]));
+                    });
+                    loadSavedConfigs();
+                    alert("Configurações importadas com sucesso!");
+                } catch (error) {
+                    alert("Erro ao importar configurações. Verifique o arquivo.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Função principal de requisição
+        document.getElementById('start-request').addEventListener('click', async () => {
+            const apiUrl = document.getElementById('api-url').value;
+            const headersInput = document.getElementById('headers').value;
+            const bodyTemplate = document.getElementById('body').value;
+            const file = document.getElementById('csv-file').files[0];
+            const delay = parseInt(document.getElementById('delay').value);
+            const separator = document.getElementById('csv-separator').value;
+            
+            if (!apiUrl || !file) {
+                alert('Preencha a URL da API e carregue um arquivo CSV.');
+                return;
+            }
+            
+            let headers = formatHeaderJson(headersInput);
+            if (!headers) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const csvText = event.target.result;
+                const lines = csvText.split('\n');
+                const headersCSV = lines[0].split(separator).map(h => h.trim());  // Cabeçalho do CSV
+                const data = lines.slice(1).map(line => {
+                    const values = line.split(separator).map(v => v.trim());
+                    return values;
+                });
+
+                // Ignora linhas em branco
+                const filteredData = data.filter(row => row.some(cell => cell.trim() !== ''));
+
+                for (let i = 0; i < filteredData.length; i++) {
+                    const row = filteredData[i];
+                    const requestBody = replacePlaceholders(bodyTemplate, row, headersCSV);  // Substitui os placeholders no corpo
+                    
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { ...headers, 'Content-Type': 'application/json' },
+                            body: requestBody
+                        });
+                        const result = await response.json();
+                        document.getElementById('results').innerHTML += `<tr><td>${i+1}</td><td>${response.status}</td><td>${JSON.stringify(result)}</td></tr>`;
+                    } catch (error) {
+                        document.getElementById('results').innerHTML += `<tr><td>${i+1}</td><td>Erro</td><td>${error.message}</td></tr>`;
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Adiciona evento de salvar a configuração
+        document.getElementById('save-config').addEventListener('click', saveConfig);
+
+        // Carrega as configurações salvas ao carregar a página
+        window.onload = loadSavedConfigs;
+    </script>
+</body>
+</html>

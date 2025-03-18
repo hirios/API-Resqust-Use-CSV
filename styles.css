@@ -1,0 +1,145 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    padding: 20px;
+    max-width: 800px;
+    margin: auto;
+    background-color: #f9f9f9;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+#saved-configs li {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row;
+    border-bottom: 1px solid #d1aae7;
+    background-color: #f0e1ff;
+    font-weight: bold;
+}
+
+#saved-configs li button {
+    margin-left: 10px;
+    cursor: pointer;
+    border: none;
+    background: rgb(210 20 20 / 0%);
+    color: #ff0000;
+    width: 30px;
+    display: flex;
+    align-items: flex-end;
+    height: 30px;
+    font-weight: 800;
+}
+
+#saved-configs li:hover {
+    background-color: #d8b9f4;
+}
+
+label {
+    font-weight: bold;
+    margin-top: 10px;
+    display: block;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+/* Estilização geral dos botões */
+button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 20px; /* Arredondado */
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+/* Botão de iniciar requisição */
+#start-request {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+}
+
+#start-request:hover {
+    background-color: #218838;
+    transform: scale(1.05);
+}
+
+/* Botão de salvar configuração */
+#save-config {
+    background-color: #ffc107; /* Amarelo */
+    color: black;
+    font-weight: bold;
+}
+
+#save-config:hover {
+    background-color: #e0a800;
+    transform: scale(1.05);
+}
+
+/* Botões de exportar/importar em tom de roxo */
+#export-configs, #import-configs-btn {
+    background-color: #6f42c1; /* Roxo vibrante */
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+#export-configs:hover, #import-configs-btn:hover {
+    background-color: #5a32a3; /* Roxo mais escuro */
+    transform: scale(1.05);
+}
+
+/* Estilização da tabela */
+table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+    background: white;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #007bff;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    input, textarea, button {
+        font-size: 14px;
+    }
+
+    button {
+        padding: 8px;
+    }
+}
